@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Payment</h1>
+    <button id="create_order">Create Order</button>
+    <button id="rzp-button1">Pay</button>
+
+</body>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    createOrderBtn = document.getElementById("create_order")
+    token = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjM4NjIzODc4LCJpYXQiOjE2MzgxOTE4NzgsImp0aSI6ImNlZDcxNjlkZDIyMjQ1NjhhYmE4NjAyODU0NWMwZGZiIiwidXNlcl9pZCI6Mn0.tTPlAB-zdhymKSkwBoCHZQGmHYWhl76qEmVfiak4aRU"
+    function createOrder(){
+        axios.post('/api/v1/order/pre-paid', {
+            firstName: 'Fred',
+            lastName: 'Flintstone'
+          },
+          {
+              'headers':{
+                  'Authorization': token
+              }
+          }
+          )
+          .then(function (response) {
+              options = response.data.options;
+              order_id = response.data.order_id
+              
+              options.handler =  function (response){
+                // verify payment
+                verification_data = {
+                    'order_id':order_id,
+                    'razorpay_payment_id':response.razorpay_payment_id,
+                    'razorpay_order_id':response.razorpay_order_id,
+                    'razorpay_signature':response.razorpay_signature
+                }
+                axios.post('/api/v1/order/verify-payment',
+                verification_data,
+                {
+                    'headers':{
+                        'Authorization':token
+                    }
+                }
+                ).then(function(response){
+                    console.log(response)
+                }).catch(function(error){
+                    console.log(error)
+                });
+            };
+            var rzp1 = new Razorpay(options);
+            rzp1.on('payment.failed', function (response){
+                    alert(response.error.code);
+                    alert(response.error.description);
+                    alert(response.error.source);
+                    alert(response.error.step);
+                    alert(response.error.reason);
+                    alert(response.error.metadata.order_id);
+                    alert(response.error.metadata.payment_id);
+            });
+            document.getElementById('rzp-button1').onclick = function(e){
+                rzp1.open();
+                e.preventDefault();
+            } 
+          })
+          .catch(function (error) {
+            console.log(error);
+          });
+    }
+    createOrderBtn.addEventListener('click',createOrder);
+
+ 
+</script>
+</html>
